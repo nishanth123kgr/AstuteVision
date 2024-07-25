@@ -11,67 +11,80 @@
     <script src="/tf.min.js"></script>
     <script src="/teachablemachine-image.min.js"></script>
     <script>
-      let host = window.location.host;
-      var socket = io("http://" + host);
-      socket.on("connect", function () {
-        console.log("Connected to server");
-      });
-
-      socket.on("command", async (data) => {
-        console.log(data);
-        if (data === "start") {
-          await init();
-        }
-      });
-
-      socket.on("disconnect", function () {
-        console.log("Disconnected from server");
-      });
-      const URL = "http://" + window.location.host;
-
-      let model, labelContainer, maxPredictions;
-
-      // Load the image model
-      async function init() {
-        const modelURL = URL + "/model.json";
-        const metadataURL = URL + "/metadata.json";
-
-        // load the model and metadata
-        model = await tmImage.load(modelURL, metadataURL);
-
-        predict();
-      }
-
-      // predict the image
-      async function predict() {
-        const image = await loadImageFromURL("https://banknotecoinstamp.com/cdn/shop/products/476-3_1024x1024.jpg");
-        const prediction = await model.predict(image);
-        let highestPrediction = 0;
-        let highestClass = "";
-        for (let i = 0; i < maxPredictions; i++) {
-          if (prediction[i].probability > highestPrediction) {
-            highestPrediction = prediction[i].probability;
-            highestClass = prediction[i].className;
-          }
-        }
-        console.log(highestClass);
-        socket.emit("prediction", highestClass);
-      }
-
-      // load image from input
-      async function loadImageFromURL(url) {
-        return new Promise((resolve, reject) => {
-          const img = new Image();
-          img.crossOrigin = "Anonymous"; // This may be required to avoid CORS issues
-          img.onload = function () {
-            resolve(img);
-          };
-          img.onerror = function () {
-            reject(new Error("Failed to load image from URL"));
-          };
-          img.src = url;
+        let host = window.location.host;
+        let socket = io("http://" + host);
+        
+        socket.on("connect", function () {
+            console.log("Connected to server");
         });
-      }
+        
+        socket.on("command", async (data) => {
+            console.log(data);
+            if (data === "start") {
+                console.log("Starting prediction");
+                await init();
+            }
+        });
+        
+        socket.on("disconnect", function () {
+            console.log("Disconnected from server");
+        });
+        
+        const URL = "http://" + window.location.host;
+        
+        let model, maxPredictions;
+        
+        // Initialize and load the model
+        async function init() {
+            const modelURL = URL + "/model.json";
+            const metadataURL = URL + "/metadata.json";
+        
+            try {
+                // Load the model and metadata
+                model = await tmImage.load(modelURL, metadataURL);
+                maxPredictions = model.getTotalClasses();
+                await predict();
+            } catch (error) {
+                console.error("Error loading model:", error);
+            }
+        }
+        
+        // Predict the image
+        async function predict() {
+            try {
+                const image = await loadImageFromURL(URL + "/image.jpg");
+                const prediction = await model.predict(image);
+                let highestPrediction = 0;
+                let highestClass = "";
+                for (let i = 0; i < prediction.length; i++) {
+                    if (prediction[i].probability > highestPrediction) {
+                        highestPrediction = prediction[i].probability;
+                        highestClass = prediction[i].className;
+                    }
+                }
+                
+                console.log(highestClass);
+                socket.emit("prediction", highestClass);
+            } catch (error) {
+                console.error("Error predicting image:", error);
+            }
+        }
+        
+        // Load image from URL
+        async function loadImageFromURL(url) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.crossOrigin = "Anonymous"; // This may be required to avoid CORS issues
+                img.onload = function () {
+                    resolve(img);
+                };
+                img.onerror = function () {
+                    reject(new Error("Failed to load image from URL"));
+                };
+                img.src = url;
+            });
+        }
+        
     </script>
   </body>
 </html>
