@@ -36,7 +36,23 @@
     // predict the image
     async function predict() {
         const input = document.getElementById("image-input");
-        const image = await loadImage(input);
+        // const image = await loadImage(input);
+        const image = await loadImageFromURL("https://banknotecoinstamp.com/cdn/shop/products/476-3_1024x1024.jpg?v=1644220992");
+        console.log(image);
+
+        async function loadImageFromURL(url) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.crossOrigin = "Anonymous"; // This may be required to avoid CORS issues
+                img.onload = function() {
+                    resolve(img);
+                };
+                img.onerror = function() {
+                    reject(new Error("Failed to load image from URL"));
+                };
+                img.src = url;
+            });
+        }
         const prediction = await model.predict(image);
         
         console.log(prediction);
@@ -54,21 +70,4 @@
         console.log("Highest prediction: " + highestClass + " (" + highestPrediction.toFixed(2) + ")");
     }
 
-    // load image from input
-    function loadImage(input) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = function (event) {
-                const img = new Image();
-                img.onload = function () {
-                    resolve(img);
-                };
-                img.onerror = function () {
-                    reject(new Error("Failed to load image"));
-                };
-                img.src = event.target.result;
-            };
-            reader.readAsDataURL(input.files[0]);
-        });
-    }
 </script>

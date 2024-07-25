@@ -20,10 +20,14 @@ io.on('connection', (socket) => {
     console.log(data);
     socket.broadcast.emit("command", data);
   });
+
+  socket.on("prediction", (data) => {
+    console.log(data);
+  });
 });
 
 const port = 3000;
-server.listen(port, "0.0.0.0",() => {
+server.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
 
