@@ -1,28 +1,31 @@
 const express = require('express');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
+const WebSocket = require('ws');
 
 const app = express();
 const server = createServer(app);
-const io = new Server(server);
+
 
 app.use(express.static('public'));
 
-io.on('connection', (socket) => {
+const wss = new WebSocket.Server({ server });
+
+wss.on('connection', (ws) => {
   console.log('A user connected');
 
-  socket.on('disconnect', () => {
+  ws.on('close', () => {
     console.log('A user disconnected');
   });
 
-  socket.emit('message', 'Hello from server');
-  socket.on("command", (data) => {
-    console.log(data);
-    socket.broadcast.emit("command", data);
-  });
-
-  socket.on("prediction", (data) => {
-    console.log(data);
+  ws.send('Hello from server');
+  ws.on('message', (message) => {
+    console.log(JSON.parse(message));
+    wss.clients.forEach((client) => {
+      if (client !== ws && client.readyState === WebSocket.OPEN) {
+        client.send(message);
+      }
+    });
   });
 });
 
