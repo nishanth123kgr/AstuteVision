@@ -18,14 +18,18 @@ wss.on('connection', (ws) => {
     console.log('A user disconnected');
   });
 
-  ws.send('Hello from server');
+  ws.send(JSON.stringify({"data":"Hello from server"}));
   ws.on('message', (message) => {
-    console.log(JSON.parse(message));
-    wss.clients.forEach((client) => {
-      if (client !== ws && client.readyState === WebSocket.OPEN) {
-        client.send(message);
-      }
-    });
+    let msg = JSON.parse(message);
+    if (msg.type === 'command') {
+      wss.clients.forEach((client) => {
+        if (client !== ws && client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify(msg));
+        }
+      });
+    } else if (msg.type === 'prediction') {
+      console.log(msg.data);
+    }
   });
 });
 
