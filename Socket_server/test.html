@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Run ONNX Model</title>
+    <script src="https://cdn.jsdelivr.net/npm/onnxjs/dist/onnx.min.js"></script>
+</head>
+<body>
+    <input type="file" id="upload" />
+    <script>
+        const session = new onnx.InferenceSession();
+        session.loadModel('./best_int32.onnx').then(() => {
+            console.log('Model loaded');
+        }).error((error) => {
+            console.error('Error loading model:', error);
+        });
+
+        function preprocessImage(image) {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            
+            // Resize the image to the required input size of the model
+            const width = 640; // Model's input width
+            const height = 640; // Model's input height
+            canvas.width = width;
+            canvas.height = height;
+            context.drawImage(image, 0, 0, width, height);
+            
+            const imageData = context.getImageData(0, 0, width, height);
+            const { data } = imageData;
+            const input = new Float32Array(width * height * 3);
+            
+            // Normalize the image data
+            for (let i = 0; i < data.length; i += 4) {
+                input[i / 4 * 3] = data[i] / 255;        // R
+                input[i / 4 * 3 + 1] = data[i + 1] / 255; // G
+                input[i / 4 * 3 + 2] = data[i + 2] / 255; // B
+            }
+            
+            return new onnx.Tensor(input, 'float32', [1, 3, width, height]);
+        }
+
+        document.getElementById('upload').addEventListener('change', async (event) => {
+            const file = event.target.files[0];
+            const image = new Image();
+            const reader = new FileReader();
+            
+            reader.onload = (e) => {
+                image.src = e.target.result;
+                image.onload = async () => {
+                    const inputTensor = preprocessImage(image);
+                    const outputMap = await session.run([inputTensor]);
+                    const outputTensor = outputMap.values().next().value;
+                    console.log('Output tensor:', outputTensor.data);
+                };
+            };
+            
+            reader.readAsDataURL(file);
+        });
+    </script>
+</body>
+</html>
